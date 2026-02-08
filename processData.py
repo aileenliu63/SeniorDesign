@@ -19,15 +19,15 @@ from analysis.basicStepAnalysis import (
     plot_peak_value_per_step_grid,
 )
 
-log_file = "/Users/taeeonkong/Desktop/trial1.txt"
-SHOW_BASIC_PLOTS = False  # Set False to suppress simple per-window plots that were crashing
+log_file = "/Users/ailee/OneDrive/Documents/Github/SeniorDesign/data/trial1.txt"
+SHOW_BASIC_PLOTS = True  # Set False to suppress simple per-window plots that were crashing
 
 # Define your windows
 windows = {
-    "calm_sleep": {
-        "label": "Calm sleep",
-        "start": time(21, 58, 39),
-        "end":   time(21, 59, 15),
+    "regular_walking": {
+        "label": "Regular Walking",
+        "start": time(21, 54, 20),
+        "end":   time(21, 54, 40),
         "timestamps": [],
         "ax": [], "ay": [], "az": [],
         "gx": [], "gy": [], "gz": [],
@@ -97,39 +97,6 @@ def relative_seconds(t_list):
         for t in t_list
     ]
 
-if SHOW_BASIC_PLOTS:
-    # Plot each window (disabled by default to avoid clutter/crashes)
-    for key, w in windows.items():
-        if not w["timestamps"]:
-            print(f"No samples found for window: {w['label']}")
-            continue
-
-        t_rel = relative_seconds(w["timestamps"])
-
-        # --- Acceleration plot ---
-        plt.figure()
-        plt.plot(t_rel, w["ax"], label="ax")
-        plt.plot(t_rel, w["ay"], label="ay")
-        plt.plot(t_rel, w["az"], label="az")
-        plt.xlabel("Time (s)")
-        plt.ylabel("Acceleration")
-        plt.title(f"Acceleration vs Time – {w['label']}")
-        plt.legend()
-        plt.grid(True)
-
-        # --- Gyroscope plot ---
-        plt.figure()
-        plt.plot(t_rel, w["gx"], label="gx")
-        plt.plot(t_rel, w["gy"], label="gy")
-        plt.plot(t_rel, w["gz"], label="gz")
-        plt.xlabel("Time (s)")
-        plt.ylabel("Gyro")
-        plt.title(f"Gyroscope vs Time – {w['label']}")
-        plt.legend()
-        plt.grid(True)
-
-    # plt.show()
-
 fs = 50  # or whatever your IMU runs at
 
 for key, w in windows.items():
@@ -158,19 +125,6 @@ for key, w in windows.items():
 # z: up down
 
 axis_list = ["gx", "gy", "gz"]
-
-for axis in axis_list:
-    print(f"\nPlotting HR vs Jerk for axis: {axis}\n")
-    plot_hr_vs_jerk(
-        windows=windows,
-        fs=fs,
-        harmonic_ratio_fn=harmonic_ratio,
-        jerk_fn=jerk_rms,
-        axis_name=axis,        # <--- key change
-        window_length_s=5.0,
-        step_s=2.5,
-    )
-
 
 # Generate [1,3] plots
 
@@ -277,8 +231,6 @@ if SHOW_BASIC_PLOTS:
 
     plt.tight_layout(rect=[0.08, 0.02, 0.88, 0.97])
     plt.show()
-
-
 
 fs = 50
 w = windows["pacing"]

@@ -1,0 +1,82 @@
+#include <ArduinoBLE.h>
+#include <Arduino_LSM6DSOX.h>
+const int LED_PIN = 13;
+// Standard BLE Environmental Sensing service & characteristic
+BLEService imuService(“181A”);  // Environmental Sensing
+BLEStringCharacteristic imuChar(
+  “2A6E”,                       // Temperature characteristic UUID (reused)
+  BLERead | BLENotify,          // must be READ + NOTIFY so app can tap it
+  64                            // max string length
+);
+bool imuOk = false;
+void setup() {
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+  Serial.begin(115200);
+  // DO NOT wait on Serial here – that breaks battery mode
+  Serial.println(“Starting IMU + BLE setup...“);
+  // ---- IMU setup ----
+  if (!IMU.begin()) {
+    Serial.println(“IMU init FAILED, will still start BLE.“);
+    imuOk = false;
+  } else {
+    Serial.println(“IMU init OK.“);
+    imuOk = true;
+  }
+  // ---- BLE setup ----
+  if (!BLE.begin()) {
+    Serial.println(“Starting BLE FAILED!“);
+    while (1) {
+      // Hard error: fast blink so you can see it even on battery
+      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+      delay(300);
+    }
+  }
+  Serial.println(“BLE started.“);
+  BLE.setLocalName(“NanoESP32_IMU”);
+  BLE.setAdvertisedService(imuService);
+  imuService.addCharacteristic(imuChar);
+  BLE.addService(imuService);
+  imuChar.writeValue(“IMU ready”);
+  BLE.advertise();
+  Serial.println(“Advertising as NanoESP32_IMU”);
+}
+void loop() {
+  // Blink slowly while waiting for a central
+  BLEDevice central = BLE.central();
+  if (!central) {
+    // Not connected yet – slow blink
+    static unsigned long lastBlink = 0;
+    if (millis() - lastBlink > 500) {
+      lastBlink = millis();
+      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+    }
+    BLE.poll();  // keep BLE stack happy
+    return;
+  }
+  // Connected – LED solid ON
+  digitalWrite(LED_PIN, HIGH);
+  Serial.print(“Connected to central: “);
+  Serial.println(central.address());
+  while (central.connected()) {
+    BLE.poll();
+    float ax, ay, az;
+    float gx, gy, gz;
+    if (imuOk && IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
+      IMU.readAcceleration(ax, ay, az);
+      IMU.readGyroscope(gx, gy, gz);
+      char buf[64];
+      snprintf(buf, sizeof(buf), “%.3f,%.3f,%.3f,%.3f,%.3f,%.3f”,
+               ax, ay, az, gx, gy, gz);
+      imuChar.writeValue(buf);  // send via BLE notification
+      Serial.println(buf);      // optional debug
+    } else if (!imuOk) {
+      imuChar.writeValue(“IMU_FAIL”);
+      Serial.println(“IMU_FAIL”);
+      delay(500);
+    }
+    delay(20);  // ~50 Hz
+  }
+  Serial.println(“Central disconnected.“);
+  digitalWrite(LED_PIN, LOW); // back to off; loop will start blinking again
+}

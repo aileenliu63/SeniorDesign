@@ -129,7 +129,7 @@ def plot_hr_vs_jerk(
                 (hr_mean, jrk_mean),
                 textcoords="offset points",
                 xytext=(6, 6),
-                fontsize=9,
+                fontsize=18,
                 fontweight="bold",
             )
     # Axis label mapping
